@@ -60,9 +60,6 @@ User question (Arabic)
 | `Labor_Law.pdf` | 2025 Egyptian Labor Law |
 | `Indexsheet.csv` | Legal index: maps topics/keywords to law name, part, and article range — used for query routing before retrieval |
 
-The notebook also supports swapping the CSV index for a live Google Sheet via a
-`USE_GOOGLE_SHEET` flag, for teams that want to update the index without touching code.
-
 ## Notable engineering challenges solved
 
 Egyptian legal PDFs turned out to have several quirks that broke naive parsing —
@@ -83,7 +80,7 @@ documented here so they're not accidentally re-broken:
 
 ## Running it
 
-1. Open `legal-ai-assistant-hybrid-rag.ipynb` in Google Colab
+1. Open `legal-ai-assistant-hybrid-rag.ipynb` in Kaggle
 2. Set the runtime to **GPU** (Runtime → Change runtime type → T4/A100)
 3. Upload `Family_Law.pdf`, `Labor_Law.pdf`, and `Indexsheet.csv` alongside the
    notebook when prompted
@@ -116,8 +113,5 @@ requires a GPU with enough VRAM (4-bit quantized, ~6GB+ recommended).
 - Core pipeline (parsing, indexing, hybrid retrieval, re-ranking, generation,
   memory) is complete and tested end-to-end
 - Evaluation against the course's required test questions is in progress
-- Google Sheets integration is implemented behind a flag but not yet the default path
 
-## License
 
-MIT — see `LICENSE`.
