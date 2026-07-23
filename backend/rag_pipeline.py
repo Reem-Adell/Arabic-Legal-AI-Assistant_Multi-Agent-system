@@ -162,7 +162,10 @@ class LegalRAGPipeline:
         # model, reranker, and 7B LLM all competing for GPU memory at once
         # — that combination is what caused the OOM crash during generate().
         if torch.cuda.is_available():
-            self.embedding_model.client = self.embedding_model.client.to("cpu")
+            underlying = getattr(self.embedding_model, "_client", None) or \
+                         getattr(self.embedding_model, "client", None)
+            if underlying is not None:
+                underlying.to("cpu")
             torch.cuda.empty_cache()
 
         self.reranker = CrossEncoder(RERANKER_MODEL_NAME, max_length=512,
