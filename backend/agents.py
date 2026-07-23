@@ -24,7 +24,7 @@ from typing import Optional, Dict, List
 
 import database as db
 from external_api import is_office_closed
-from rag_pipeline import pipeline, RagAnswer
+from rag_pipeline import pipeline, RagAnswer, GENERAL_SPECIALIZATION
 
 WORK_START = time(9, 0)
 WORK_END = time(17, 0)
@@ -118,6 +118,9 @@ class LegalQAAgent:
 # ---------------------------------------------------------------------
 class SpecializationAgent:
     def offer_text(self, specialization: str) -> str:
+        if specialization == GENERAL_SPECIALIZATION:
+            return ("يبدو أن استشارتك تحتاج مراجعة محامٍ. "
+                    "هل تريد حجز موعد مع أحد محامينا؟ (نعم / لا)")
         return (f"يبدو أن استشارتك تحتاج محاميًا متخصصًا في \"{specialization}\". "
                 f"هل تريد حجز موعد مع أحد محامينا المتخصصين؟ (نعم / لا)")
 

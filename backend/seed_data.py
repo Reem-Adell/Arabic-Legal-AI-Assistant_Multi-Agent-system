@@ -3,4 +3,5 @@ DEFAULT_LAWYERS = [
     {"name": "أ. أحمد فتحي", "specialization": "أحوال شخصية"},
     {"name": "أ. مريم عادل", "specialization": "قانون العمل"},
     {"name": "أ. كريم حسن", "specialization": "قانون العمل"},
+    {"name": "أ. ياسمين فؤاد", "specialization": "قضايا عامة"},
 ]

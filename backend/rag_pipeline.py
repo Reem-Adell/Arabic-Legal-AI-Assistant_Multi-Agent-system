@@ -60,6 +60,14 @@ REFUSAL_MESSAGE = (
     "لم أتمكن من العثور على نص قانوني في المستندات المتاحة يدعم الإجابة على هذا السؤال."
 )
 
+# Used when the RAG pipeline can't find supporting text at all — the
+# topic-routing match (if any) is not trustworthy in that case, since it's
+# only a semantic-similarity guess and the retrieved documents didn't
+# actually confirm it. Rather than pointing the user to a specific
+# specialization that may be wrong (e.g. routing a criminal-law question to
+# a labor-law lawyer), we hand off to general practice.
+GENERAL_SPECIALIZATION = "قضايا عامة"
+
 SYSTEM_INSTRUCTIONS = """أنت مساعد قانوني متخصص في القانون المصري.
 اكتب إجابتك كاملة باللغة العربية الفصحى فقط. لا تستخدم أي لغة أخرى إطلاقاً.
 أجب فقط بالاعتماد على النصوص القانونية المسترجعة أدناه. لا تخترع أي معلومة قانونية أبداً.
@@ -287,7 +295,11 @@ class LegalRAGPipeline:
 
         docs = self.hybrid_retrieve(query, routed)
         if not docs:
-            return RagAnswer(REFUSAL_MESSAGE, routed_law, routed_subtopic, specialization, [])
+            # No supporting legal text was actually found, so the routing
+            # guess above isn't confirmed — don't offer a specific
+            # specialization based on it. Hand off to general practice
+            # instead, and don't claim a routed_law/subtopic we can't back up.
+            return RagAnswer(REFUSAL_MESSAGE, None, None, GENERAL_SPECIALIZATION, [])
 
         context = "\n\n".join(
             f"[{d.metadata.get('law_name', '')} - مادة {d.metadata.get('article', '')}] {d.page_content}"
@@ -295,6 +307,17 @@ class LegalRAGPipeline:
         )
         prompt = f"{SYSTEM_INSTRUCTIONS}\n\nسجل المحادثة:\n{history_text}\n\nالنصوص المسترجعة:\n{context}\n\nسؤال المستخدم: {query}"
         answer_text = self.generate(prompt)
+
+        if REFUSAL_MESSAGE in answer_text:
+            # The retrieved docs were weak/irrelevant (e.g. hybrid retrieval
+            # returned something even though it doesn't really answer the
+            # question) and the model correctly refused — but it may still
+            # hallucinate extra text after the refusal (like a fake "المصدر:"
+            # line) since it's following the output-format instructions. Trim
+            # to just the refusal line, and don't trust the earlier routing
+            # guess for specialization since it was never actually confirmed.
+            return RagAnswer(REFUSAL_MESSAGE, None, None, GENERAL_SPECIALIZATION, [])
+
         sources = [f"{d.metadata.get('law_name', '')} - مادة {d.metadata.get('article', '')}" for d in docs]
         return RagAnswer(answer_text, routed_law, routed_subtopic, specialization, sources)
 

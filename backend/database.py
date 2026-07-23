@@ -53,12 +53,18 @@ def init_db():
 
 
 def seed_lawyers_if_empty(lawyers: List[Dict[str, str]]):
+    """Idempotent by name: inserts any lawyer from the seed list that isn't
+    already in the DB, rather than only seeding when the table is fully
+    empty. This means adding a new lawyer to seed_data.py (e.g. the
+    general-practice lawyer) still takes effect on an existing database
+    without needing to delete legal_office.db."""
     with get_conn() as conn:
-        count = conn.execute("SELECT COUNT(*) AS c FROM lawyers").fetchone()["c"]
-        if count == 0:
+        existing = {row["name"] for row in conn.execute("SELECT name FROM lawyers").fetchall()}
+        to_insert = [lw for lw in lawyers if lw["name"] not in existing]
+        if to_insert:
             conn.executemany(
                 "INSERT INTO lawyers (name, specialization) VALUES (:name, :specialization)",
-                lawyers,
+                to_insert,
             )
 
 
