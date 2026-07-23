@@ -156,7 +156,23 @@ class LegalRAGPipeline:
         ).tolist()
         self.legal_index_embeddings = np.array(self.embedding_model.embed_documents(legal_index_texts))
 
-        self.reranker = CrossEncoder(RERANKER_MODEL_NAME, max_length=512)
+        # Free the embedding model from GPU memory before loading the LLM —
+        # a single T4/P100 can't hold bge-m3 + reranker + Qwen2.5-7B on GPU
+        # all at once. Same fix as the midterm notebook's cells 15-16.
+        import gc
+        if torch.cuda.is_available():
+            del self.embedding_model
+            gc.collect()
+            torch.cuda.empty_cache()
+            self.embedding_model = HuggingFaceEmbeddings(
+                model_name=EMBEDDING_MODEL_NAME,
+                model_kwargs={"device": "cpu"},
+                encode_kwargs={"normalize_embeddings": True},
+            )
+            print("[rag_pipeline] Moved embedding model to CPU to free GPU memory for the LLM.")
+
+        self.reranker = CrossEncoder(RERANKER_MODEL_NAME, max_length=512,
+                                      device="cuda" if torch.cuda.is_available() else "cpu")
 
         self.tokenizer = AutoTokenizer.from_pretrained(LLM_MODEL_NAME)
         if torch.cuda.is_available():
