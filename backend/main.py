@@ -18,7 +18,11 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+import logging
 import os
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("legal-ai")
 
 import database as db
 from seed_data import DEFAULT_LAWYERS
@@ -52,7 +56,11 @@ def health():
 def chat(req: ChatRequest):
     if not req.message.strip():
         raise HTTPException(400, "message cannot be empty")
-    result = agents.handle_message(req.session_id, req.message, req.client_name)
+    try:
+        result = agents.handle_message(req.session_id, req.message, req.client_name)
+    except Exception:
+        logger.exception("chat handling failed for session=%s message=%r", req.session_id, req.message)
+        raise HTTPException(500, "internal error — check server.log for the traceback")
     return result
 
 

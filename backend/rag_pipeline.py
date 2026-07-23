@@ -156,23 +156,17 @@ class LegalRAGPipeline:
         ).tolist()
         self.legal_index_embeddings = np.array(self.embedding_model.embed_documents(legal_index_texts))
 
-        # Free the embedding model from GPU memory before loading the LLM —
-        # a single T4/P100 can't hold bge-m3 + reranker + Qwen2.5-7B on GPU
-        # all at once. Same fix as the midterm notebook's cells 15-16.
-        import gc
+        # Free the embedding model's GPU memory now that all indexes are
+        # built. It's still used at query time (one short text per request),
+        # so CPU inference here is fast enough and avoids the embedding
+        # model, reranker, and 7B LLM all competing for GPU memory at once
+        # — that combination is what caused the OOM crash during generate().
         if torch.cuda.is_available():
-            del self.embedding_model
-            gc.collect()
+            self.embedding_model.client = self.embedding_model.client.to("cpu")
             torch.cuda.empty_cache()
-            self.embedding_model = HuggingFaceEmbeddings(
-                model_name=EMBEDDING_MODEL_NAME,
-                model_kwargs={"device": "cpu"},
-                encode_kwargs={"normalize_embeddings": True},
-            )
-            print("[rag_pipeline] Moved embedding model to CPU to free GPU memory for the LLM.")
 
         self.reranker = CrossEncoder(RERANKER_MODEL_NAME, max_length=512,
-                                      device="cuda" if torch.cuda.is_available() else "cpu")
+                                      device="cpu" if torch.cuda.is_available() else None)
 
         self.tokenizer = AutoTokenizer.from_pretrained(LLM_MODEL_NAME)
         if torch.cuda.is_available():
