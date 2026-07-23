@@ -1,117 +1,93 @@
-# Arabic Legal AI Assistant — Hybrid RAG with Legal-Index Routing
+# Arabic Legal AI Assistant — Multi-Agent Final Project
 
-A Retrieval-Augmented Generation (RAG) system that answers questions in Arabic about
-Egyptian personal-status (family) law and the 2025 labor law, grounded strictly in the
-source legislation.
+Builds on the midterm "Arabic Legal AI Assistant" (hybrid BM25 + FAISS
+RAG over Egyptian Family Law & Labor Law) and turns it into a full
+multi-agent system with a web GUI, a FastAPI backend, appointment
+booking, and an external-API integration — per the Final Project
+(Week 6) brief.
 
-Built as the mid-term project for an AI Agent course. Runs end-to-end on a free
-Google Colab GPU runtime with no API keys required.
+## What's new vs. the midterm project
 
-## What it does
-
-- Answers Arabic legal questions with citations back to the specific law and article
-- Routes each query to the correct statute *before* retrieving text, using a
-  lightweight metadata index rather than guessing from the full corpus
-- Combines lexical (BM25) and semantic (FAISS) retrieval, then re-ranks with a
-  cross-encoder for precision
-- Supports natural follow-up questions via a custom conversational memory layer
-  that contextualizes each new query against the conversation so far
-- Refuses to answer when the retrieved documents don't actually support a claim,
-  instead of hallucinating a legal opinion
-
-## Architecture
-
-```
-User question (Arabic)
-        │
-        ▼
- Legal Index routing ── picks the relevant law(s) from Indexsheet.csv
-        │
-        ▼
- Hybrid retrieval ── BM25 (lexical) + FAISS (semantic, BAAI/bge-m3)
-        │
-        ▼
- Cross-encoder re-ranking ── BAAI/bge-reranker-v2-m3
-        │
-        ▼
- Grounded generation ── Qwen2.5-7B-Instruct, with conversational memory
-        │
-        ▼
- Answer + cited article(s), or refusal if unsupported
-```
-
-## Models & components
-
-| Component        | Model / Library                     |
-|-------------------|--------------------------------------|
-| Embeddings        | `BAAI/bge-m3`                       |
-| Re-ranker         | `BAAI/bge-reranker-v2-m3`           |
-| LLM               | `Qwen2.5-7B-Instruct` (4-bit)       |
-| Lexical retrieval | `rank_bm25`                         |
-| Vector store      | FAISS (CPU)                         |
-| PDF parsing       | PyMuPDF (`fitz`)                    |
-| Orchestration     | LangChain (core, community, HF)     |
-
-## Data
-
-| File | Description |
+| Requirement (brief) | Implementation |
 |---|---|
-| `Family_Law.pdf` | Bundle of five Egyptian personal-status statutes (each restarts article numbering from 1) |
-| `Labor_Law.pdf` | 2025 Egyptian Labor Law |
-| `Indexsheet.csv` | Legal index: maps topics/keywords to law name, part, and article range — used for query routing before retrieval |
+| Data retrieval from PDFs | Reused midterm hybrid-RAG pipeline (`backend/rag_pipeline.py`, `backend/midterm_parsing.py`) |
+| LLM processing & summarization | Qwen2.5-7B-Instruct, unchanged prompt/format from the midterm project |
+| Automated actions | Appointment booking is written to a SQLite database and shown back to the user |
+| Workflow orchestration / multi-agent | `backend/agents.py` — `LegalQAAgent`, `SpecializationAgent`, `SchedulingAgent`, coordinated by a conversation-state-machine `Orchestrator` |
+| GUI | `frontend/` — plain HTML/CSS/JS chat interface + appointment/lawyer panels |
+| Backend | FastAPI (`backend/main.py`) |
+| Deployment for demo | ngrok (see `run_in_colab.md`) |
+| External API integration | `backend/external_api.py` — free Nager.Date public-holidays API, used so the booking agent never proposes an appointment on an Egyptian public holiday |
+| Testing & evaluation | `backend/agents.py` logic was exercised end-to-end locally in mock mode (see below) before wiring in the real models |
 
-## Notable engineering challenges solved
+## How the appointment flow works
 
-Egyptian legal PDFs turned out to have several quirks that broke naive parsing —
-documented here so they're not accidentally re-broken:
+1. User asks a legal question in the chat.
+2. `LegalQAAgent` answers it via the same hybrid RAG pipeline as the
+   midterm project, and the Legal-Index routing result tells the
+   orchestrator which law was matched.
+3. If a law was matched, `SpecializationAgent` maps it to a lawyer
+   specialization (`قانون الأحوال الشخصية` → `أحوال شخصية`,
+   `قانون العمل` → `قانون العمل`) and offers to book an appointment.
+4. If the user agrees, they're asked for a preferred date/time.
+5. `SchedulingAgent`:
+   - checks the SQLite `appointments` table for a free lawyer with
+     that specialization at that exact slot,
+   - if none is free, searches forward (skipping weekends and, when
+     reachable, Egyptian public holidays via the external API) for
+     the nearest open slot across all lawyers with that
+     specialization, and proposes it,
+   - on confirmation, books the appointment (`UNIQUE(lawyer_id, date,
+     time)` at the DB level prevents double-booking even under
+     concurrent requests).
+6. The booked appointment (lawyer name, specialization, date, time)
+   is returned to the frontend and rendered in a dedicated
+   "تفاصيل الموعد" panel.
 
-1. **Bundled statutes with restarting article numbers** — `Family_Law.pdf` contains
-   five distinct laws, each starting again from Article 1. Internal segment markers
-   in the text are used to detect boundaries and tag each chunk with the correct
-   official law name.
-2. **Reversed Eastern Arabic-Indic numerals** — `Labor_Law.pdf` encodes some article
-   numbers in Eastern Arabic-Indic digits that come out of PyMuPDF extraction
-   reversed (e.g. Article 14 extracts as "٤١"). A dedicated parser detects and
-   corrects this.
-3. **Spelled-out ordinal article numbers** — part of the family law bundle uses
-   ordinal words instead of digits, handled by a regex + word-to-integer lookup.
-4. A post-extraction sanity check flags duplicate article numbers per law, catching
-   any parsing regressions before they reach the index.
-
-## Running it
-
-1. Open `legal-ai-assistant-hybrid-rag.ipynb` in Kaggle
-2. Set the runtime to **GPU** (Runtime → Change runtime type → T4/A100)
-3. Upload `Family_Law.pdf`, `Labor_Law.pdf`, and `Indexsheet.csv` alongside the
-   notebook when prompted
-4. Run all cells top to bottom — the first cell installs all dependencies, no API
-   keys needed
-
-### Requirements (for local/reference use)
-
-```
-pip install -r requirements.txt
-```
-
-Note: the notebook is written for a Colab GPU runtime; running the 7B LLM locally
-requires a GPU with enough VRAM (4-bit quantized, ~6GB+ recommended).
-
-## Repository structure
+## Project layout
 
 ```
-.
-├── legal-ai-assistant-hybrid-rag.ipynb   # Main deliverable — full pipeline
-├── Family_Law.pdf                        # Source legislation (5 bundled statutes)
-├── Labor_Law.pdf                         # Source legislation (2025 Labor Law)
-├── Indexsheet.csv                        # Legal index used for query routing
-├── requirements.txt
-└── README.md
+backend/
+  main.py            FastAPI app, routes, static frontend mount
+  agents.py           Multi-agent orchestration + conversation state machine
+  rag_pipeline.py      Midterm RAG pipeline, repackaged as a class (+ mock mode)
+  midterm_parsing.py    Article-level PDF chunking (unchanged from midterm)
+  database.py          SQLite: lawyers, appointments
+  external_api.py       Public-holidays API integration
+  schemas.py            Pydantic request/response models
+  seed_data.py            Default lawyer roster
+  requirements.txt
+frontend/
+  index.html / style.css / script.js   Chat GUI + side panels
+run_in_colab.md      Step-by-step Colab + ngrok deployment
 ```
 
-## Status
+## Quick start (no GPU — frontend/backend/agents only)
 
-- Core pipeline (parsing, indexing, hybrid retrieval, re-ranking, generation,
-  memory) is complete and tested end-to-end
-- Evaluation against the course's required test questions is in progress
+```bash
+cd backend
+pip install fastapi uvicorn pydantic requests pyngrok
+LEGAL_RAG_MOCK=1 uvicorn main:app --reload --port 8000
+```
+Open http://127.0.0.1:8000 — the RAG answers are placeholders labelled
+`[MOCK MODE]`, but routing, the booking agent, the database, and the
+whole GUI are fully live. This was used to test the booking/alt-slot
+logic (double-booking prevention, nearest-slot search) before running
+the real models.
 
+## Full run with real models
 
+See `run_in_colab.md` — needs a Colab GPU runtime, the midterm PDFs +
+`Indexsheet.csv`, and a free ngrok authtoken.
+
+## Notes / design decisions
+
+- Sessions are kept in memory (`agents.SESSIONS`) for simplicity; a
+  production version would persist conversation state per-user.
+- The RAG pipeline's `answer_query()` keeps the midterm project's rule
+  of returning the fixed refusal sentence when retrieved passages
+  don't support an answer, and never invents legal information.
+- Explicit failure over silent fallback is kept from the midterm
+  project's principles: a missing `Indexsheet.csv` raises
+  `FileNotFoundError` rather than silently using hardcoded data, and
+  MOCK mode is an explicit, logged switch rather than an implicit one.

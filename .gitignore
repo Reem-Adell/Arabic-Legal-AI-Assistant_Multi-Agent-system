@@ -1,24 +1,6 @@
-# Python
 __pycache__/
 *.pyc
-.ipynb_checkpoints/
-
-# Environments
+backend/legal_office.db
+backend/data/
 .env
-.venv/
-venv/
-
-# Model / cache artifacts (re-downloaded by the notebook at runtime)
-*.faiss
-*.pkl
-*.bin
-*.safetensors
-models/
-cache/
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Colab
-*.ipynb_checkpoints
+.ipynb_checkpoints/

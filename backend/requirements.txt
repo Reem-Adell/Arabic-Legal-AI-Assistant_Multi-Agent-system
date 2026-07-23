@@ -1,0 +1,29 @@
+# --- API / server ---
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+pydantic==2.9.2
+python-multipart==0.0.9
+requests==2.32.3
+pyngrok==7.2.0
+
+# --- RAG stack (same versions as the midterm notebook) ---
+langchain-core==0.3.75
+langchain==0.3.27
+langchain-community==0.3.27
+langchain-text-splitters==0.3.9
+langchain-huggingface==0.3.1
+bitsandbytes>=0.46.1
+pymupdf
+sentence-transformers
+rank_bm25
+faiss-cpu
+transformers
+accelerate
+pandas
+peft
+torch
+
+# NOTE: to run the backend locally on a laptop with no GPU while
+# developing the FastAPI / agents / frontend layers, set
+#   LEGAL_RAG_MOCK=1
+# and you only need: fastapi, uvicorn, pydantic, requests, pyngrok

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>المساعد القانوني الذكي</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="app">
+    <header class="app-header">
+      <h1>⚖️ المساعد القانوني الذكي</h1>
+      <p>استشارات قانونية فورية وحجز مواعيد مع محامينا المتخصصين</p>
+    </header>
+
+    <main class="layout">
+      <section class="chat-panel">
+        <div id="chat-window" class="chat-window">
+          <div class="message bot">
+            مرحبًا! اسألني أي سؤال قانوني متعلق بالأحوال الشخصية أو قانون العمل المصري، وسأساعدك في الإجابة
+            وربطك بمحامٍ متخصص عند الحاجة.
+          </div>
+        </div>
+        <form id="chat-form" class="chat-form">
+          <input id="chat-input" type="text" placeholder="اكتب سؤالك هنا..." autocomplete="off" required />
+          <button type="submit">إرسال</button>
+        </form>
+      </section>
+
+      <aside class="side-panel">
+        <div class="card">
+          <h2>📅 تفاصيل الموعد</h2>
+          <div id="appointment-box" class="appointment-box empty">
+            لا يوجد موعد محجوز بعد.
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>👩‍⚖️ فريق المحامين</h2>
+          <ul id="lawyer-list" class="lawyer-list"></ul>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <script src="/static/script.js"></script>
+</body>
+</html>
