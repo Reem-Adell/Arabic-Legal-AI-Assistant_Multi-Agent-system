@@ -1,24 +1,9 @@
 # Arabic Legal AI Assistant — Multi-Agent Final Project
 
-Builds on the midterm "Arabic Legal AI Assistant" (hybrid BM25 + FAISS
+Builds"Arabic Legal AI Assistant" (hybrid BM25 + FAISS
 RAG over Egyptian Family Law & Labor Law) and turns it into a full
 multi-agent system with a web GUI, a FastAPI backend, appointment
-booking, and an external-API integration — per the Final Project
-(Week 6) brief.
-
-## What's new vs. the midterm project
-
-| Requirement (brief) | Implementation |
-|---|---|
-| Data retrieval from PDFs | Reused midterm hybrid-RAG pipeline (`backend/rag_pipeline.py`, `backend/midterm_parsing.py`) |
-| LLM processing & summarization | Qwen2.5-7B-Instruct, unchanged prompt/format from the midterm project |
-| Automated actions | Appointment booking is written to a SQLite database and shown back to the user |
-| Workflow orchestration / multi-agent | `backend/agents.py` — `LegalQAAgent`, `SpecializationAgent`, `SchedulingAgent`, coordinated by a conversation-state-machine `Orchestrator` |
-| GUI | `frontend/` — plain HTML/CSS/JS chat interface + appointment/lawyer panels |
-| Backend | FastAPI (`backend/main.py`) |
-| Deployment for demo | ngrok (see `run_in_colab.md`) |
-| External API integration | `backend/external_api.py` — free Nager.Date public-holidays API, used so the booking agent never proposes an appointment on an Egyptian public holiday |
-| Testing & evaluation | `backend/agents.py` logic was exercised end-to-end locally in mock mode (see below) before wiring in the real models |
+booking, and an external-API integration
 
 ## How the appointment flow works
 
@@ -77,15 +62,14 @@ the real models.
 
 ## Full run with real models
 
-See `run_in_colab.md` — needs a Colab GPU runtime, the midterm PDFs +
+See `run_in_colab.md` — needs a Colab GPU runtime, the PDFs +
 `Indexsheet.csv`, and a free ngrok authtoken.
 
 ## Notes / design decisions
 
 - Sessions are kept in memory (`agents.SESSIONS`) for simplicity; a
   production version would persist conversation state per-user.
-- The RAG pipeline's `answer_query()` keeps the midterm project's rule
-  of returning the fixed refusal sentence when retrieved passages
+- The RAG pipeline's `answer_query()`returning the fixed refusal sentence when retrieved passages
   don't support an answer, and never invents legal information.
 - Explicit failure over silent fallback is kept from the midterm
   project's principles: a missing `Indexsheet.csv` raises
