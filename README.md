@@ -1,4 +1,4 @@
-# Arabic Legal AI Assistant — Multi-Agent Final Project
+# Arabic Legal AI Assistant — Multi-Agent system
 
 Builds"Arabic Legal AI Assistant" (hybrid BM25 + FAISS
 RAG over Egyptian Family Law & Labor Law) and turns it into a full
